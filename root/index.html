@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="da-dk">
+<!-- lang="en" -->
+
+<head>
+    <meta charset="utf-8">
+    <meta name=”robots” content=”index, follow”>
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, shrink-to-fit=no">
+    <meta name="keywords" content="pw, password, secure, strong, safe, code, crypto, key, generator" />
+    <meta name="copyright" content="Seahawk.dk">
+    <meta name="description" content="Generator for strong passwords, with multiple alphabets." />
+    <meta name="author" content="Sommer, OZ1SQT">
+    <title>Seahawk.dk - Strong Password generator</title>
+    <script src="pw.js"></script>
+</head>
+
+<body onload="generatePW()">
+    <h1>Strong Password generator</h1>
+    <p><em>Generated password, right clik and copy:</em></p>
+    <!-- Generated password --><strong><p id="productX"></p></strong>
+    <p style="color:#ff0000"><strong>Note:</strong> It is possible to generate passwords without all checked elements (they are added as random values), if this happens, try to generate a password.</p>
+    <select name="length" id="lengthChecked">
+        <option value="10">10</option>
+        <option value="11">11</option>
+        <option value="12">12</option>
+        <option value="13">13</option>
+        <option value="14">14</option>
+        <option value="15">15</option>
+        <option value="16">16</option>
+        <option value="17">17</option>
+        <option value="18" selected>18</option>
+        <option value="19">19</option>
+        <option value="20">20</option>
+        <option value="21">21</option>
+        <option value="22">22</option>
+        <option value="23">23</option>
+        <option value="24">24</option>
+        <option value="25">25</option>
+        <option value="26">26</option>
+        <option value="27">27</option>
+        <option value="28">28</option>
+        <option value="29">29</option>
+        <option value="30">30</option>
+        <option value="31">31</option>
+        <option value="32">32</option>
+        <option value="33">33</option>
+        <option value="34">34</option>
+        <option value="35">35</option>
+        <option value="36">36</option>
+        <option value="37">37</option>
+        <option value="38">38</option>
+        <option value="39">39</option>
+        <option value="40">40</option>
+        <option value="41">41</option>
+        <option value="42">42</option>
+        <option value="43">43</option>
+        <option value="44">44</option>
+        <option value="45">45</option>
+        <option value="46">46</option>
+        <option value="47">47</option>
+        <option value="48">48</option>
+        <option value="49">49</option>
+        <option value="50">50</option>
+        <option value="51">51</option>
+        <option value="52">52</option>
+        <option value="53">53</option>
+        <option value="54">54</option>
+        <option value="55">55</option>
+        <option value="56">56</option>
+        <option value="57">57</option>
+        <option value="58">58</option>
+        <option value="59">59</option>
+        <option value="60">60</option>
+        <option value="61">61</option>
+        <option value="62">62</option>
+        <option value="63">63</option>
+        <option value="64">64</option>
+        <option value="65">65</option>
+        <option value="66">66</option>
+        <option value="67">67</option>
+        <option value="68">68</option>
+        <option value="69">69</option>
+        <option value="70">70</option>
+        <option value="71">71</option>
+        <option value="72">72</option>
+        <option value="73">73</option>
+        <option value="74">74</option>
+        <option value="75">75</option>
+        <option value="76">76</option>
+        <option value="77">77</option>
+        <option value="78">78</option>
+        <option value="79">79</option>
+        <option value="80">80</option>
+        <option value="81">81</option>
+        <option value="82">82</option>
+        <option value="83">83</option>
+        <option value="84">84</option>
+        <option value="85">85</option>
+        <option value="86">86</option>
+        <option value="87">87</option>
+        <option value="88">88</option>
+        <option value="89">89</option>
+        <option value="90">60</option>
+        <option value="91">61</option>
+        <option value="92">62</option>
+        <option value="93">63</option>
+        <option value="94">64</option>
+        <option value="95">55</option>
+        <option value="96">56</option>
+        <option value="97">57</option>
+        <option value="98">58</option>
+        <option value="99">59</option>
+        <option value="100">100</option>
+        <option value="101">101</option>
+        <option value="102">102</option>
+        <option value="103">103</option>
+        <option value="104">104</option>
+        <option value="105">105</option>
+        <option value="106">106</option>
+        <option value="107">107</option>
+        <option value="108">108</option>
+        <option value="109">109</option>
+        <option value="110">110</option>
+        <option value="111">111</option>
+        <option value="112">112</option>
+        <option value="113">113</option>
+        <option value="114">114</option>
+        <option value="115">115</option>
+        <option value="116">116</option>
+        <option value="117">117</option>
+        <option value="118">118</option>
+        <option value="119">119</option>
+        <option value="120">120</option>
+        <option value="121">121</option>
+        <option value="122">122</option>
+        <option value="123">123</option>
+        <option value="124">124</option>
+        <option value="125">125</option>
+        <option value="126">126</option>
+        <option value="127">127</option>
+        <option value="128">128</option>
+    </select>
+    <label for="length">Length: </label>
+    <button onclick="generatePW()" class="btn btn-secondary" style="float: right;">Generate</button>
+    <div>
+        <div>
+            <input type="checkbox" id="latinChecked" checked>
+            <label for="lowerchaseChecked">Latin: ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz</label>
+        </div>
+        <div>
+            <input type="checkbox" id="numbersChecked" checked>
+            <label for="signsChecked">Numbers: 0123456789</label>
+        </div>
+        <div>
+            <input type="checkbox" id="signsChecked" checked>
+            <label for="greekChecked">Signs: /|()1{}[]?-_+~&#60;&#62;i!I;:,^`'.$@B%8&#38;WM#*</label>
+        </div>
+        <div>
+            <input type="checkbox" id="nordicChecked">
+            <label for="nordicChecked">Nordic: AaÁáBbCcDdÐðEeÉéFfGgHhIiÍíJjKkLlMmNnOoÓóPpRrSsTtUuÚúVvWwXxYyÝýZzÞþÆæÖöZzÄäØøÅå</label>
+        </div>
+        <div>
+            <input type="checkbox" id="greekChecked">
+            <label for="numbersChecked">Greek: ΑαΒβΓγΔδΕεΖζΗηΘθΙιΚκΛλΜμΝνΞξΟοΠπΡρΣσςΤτΥυΦφΧχΨψΩω</label>
+        </div>
+        <div>
+            <input type="checkbox" id="cyrillicChecked">
+            <label for="upperchaseChecked">Cyrillic: БбВвГгДдЕеЖжЗзИиЙйКкЛлМмНнОоПпРрСсТтУуФфХхЦцЧчШшЩщЬьЮюЯя</label>
+        </div>
+        <div>
+            <input type="checkbox" id="armenianChecked">
+            <label for="kyrilicChecked">Armenian: աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆուև</label>
+        </div>
+        <div>
+            <input type="checkbox" id="hangulChecked">
+            <label for="arabicChecked">Hangul: ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎㅏㅑㅓㅕㅗㅛㅜㅠㅡㅣ</label>
+        </div>
+        <div>
+            <input type="checkbox" id="arabicChecked">
+            <label for="arabicChecked">Arabic: ءي و ه ن م لك ق ف غ ع ظ ط ض ص ش س ز ر ذ د خ ح ج ث ت ب ا</label>
+        </div>
+    </div>
+    <p>Places where you need to use your generated password may set restrictions on, for example, length and use of characters and other alphabets, adjust the generator
+        <br>to follow these guidelines. The more chosen, the more secure the password, but a challenge can be that it is difficult to enter individual characters on a mobile phone,
+        <br>Here you can copy from saved passwords in your browser.</p>
+    <br>
+    <h3>Guide:</h3>
+    <ul>
+        <li>Save your passwords in your browser and have them sync to the cloud/internet so you can recover your passwords, they're encrypted so other people
+            <br> can't access them without your computer's login password or your fingerprint.</li>
+        <li>Do NOT reuse passwords, if you store your passwords in your browser, then you do not have to remember them in your head, or on a piece of paper.</li>
+        <li>Use 2-factor authentication, if possible, so that others cannot use your password without, for example, having access to your phone or email account.</li>
+        <li>Do not use words or compound words that can be found in a dictionary for passwords.</li>
+        <li>Do not use websites that can send your password to you if you have forgotten it, as they store your password in clear text.</li>
+    </ul>
+    <br>
+    <p>&copy; 2007
+        <script>
+            new Date().getFullYear() > 2007 && document.write("-" + new Date().getFullYear());
+        </script>, <a href="https://seahawk.dk" class="text-muted">Seahawk.dk</a>, for use, make a reference to the project on <a href="https://github.com/OZoneSQT/StrongPasswordGenerator" target="_blank">GitHub</a> according to the MIT License.</p>
+</body>
+
+</html>
