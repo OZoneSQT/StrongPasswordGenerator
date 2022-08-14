@@ -1,16 +1,5 @@
 "use strict";
 
-document.getElementById("lengthChecked").addEventListener("change", generatePW);
-document.getElementById("latinChecked").addEventListener("change", generatePW);
-document.getElementById("numbersChecked").addEventListener("change", generatePW);
-document.getElementById("signsChecked").addEventListener("change", generatePW);
-document.getElementById("nordicChecked").addEventListener("change", generatePW);
-document.getElementById("cyrillicChecked").addEventListener("change", generatePW);
-document.getElementById("greekChecked").addEventListener("change", generatePW);
-document.getElementById("greekChecked").addEventListener("change", generatePW);
-document.getElementById("armenianChecked").addEventListener("change", generatePW);
-
-
 function generatePW() {
     var base = "";
     var result = "";
@@ -18,12 +7,16 @@ function generatePW() {
     var latinLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
     var cyrillicLetters = "БбВвГгДдЕеЖжЗзИиЙйКкЛлМмНнОоПпРрСсТтУуФфХхЦцЧчШшЩщЬьЮюЯя"
     var greekLetters = "ΑαΒβΓγΔδΕεΖζΗηΘθΙιΚκΛλΜμΝνΞξΟοΠπΡρΣσςΤτΥυΦφΧχΨψΩω"
-    var numbersLetters = "123456789"
+    var numbersLetters = "1234567890"
     var signsLetters = "/|()1{}[]?-_+~<>!I;:,^`.$@B%&WM*"
     var armenianLetters = "աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆուև"
     var hangulLetters = "ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎㅏㅑㅓㅕㅗㅛㅜㅠㅡㅣ"
     var nordicLetters = "AaÁáBbCcDdÐðEeÉéFfGgHhIiÍíJjKkLlMmNnOoÓóPpRrSsTtUuÚúVvWwXxYyÝýZzÞþÆæÖöZzÄäØøÅå"
     var arabicLetters = "ءي و ه ن م لك ق ف غ ع ظ ط ض ص ش س ز ر ذ د خ ح ج ث ت ب ا"
+    var georgianLetters = "აბგდევზთიკლმნოპჟრსტუფქღყშჩცძწჭხჯჰ"
+    var ethiopianLetters = "ሀለሐመሠረሰቀበተኀነአከወዐዘየደገጠጸፀፈጰፐ"
+    var thaanaLetters = "ހށނރބޅކއވމފދތލގސޑޒޓޔޕޖޗޘޙޚޛޜޝޞޟޠޡޢޣޤޥަ	ީ	ު	ޫ	ެ	ޭ	ޮ	ޯޱ"
+    var hanziLetters = "ぁあぃいぅうぇえぉおかがきぎくぐけげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろゎわゐゑをんゔゕゖ ゙ ゛゜ゝゞゟ"
     
     // input
     var length = document.getElementById('lengthChecked').value
@@ -36,18 +29,33 @@ function generatePW() {
     var armenian = document.getElementById('armenianChecked')
     var hangul = document.getElementById('hangulChecked')
     var arabic = document.getElementById('arabicChecked')
+    var georgian = document.getElementById('georgianChecked')
+    var ethiopian = document.getElementById('ethiopianChecked')
+    var thaana = document.getElementById('thaanaChecked')
+    var hanzi = document.getElementById('hanziChecked')
     
     
     // build source string
+    if (arabic.checked) { base = base + arabicLetters; }
     if (latin.checked) { base = base + latinLetters; }
-    if (cyrillic.checked) { base = base + cyrillicLetters; }
+    if (signs.checked) { base = base + signsLetters; }
     if (greek.checked) { base = base + greekLetters; }
     if (numbers.checked) { base = base + numbersLetters; }
-    if (signs.checked) { base = base + signs; }
     if (armenian.checked) { base = base + armenianLetters; }
     if (hangul.checked) { base = base + hangulLetters; }
+    if (numbers.checked) { base = base + numbersLetters; }
     if (nordic.checked) { base = base + nordicLetters; }
-    if (arabic.checked) { base = base + arabicLetters; }
+    if (cyrillic.checked) { base = base + cyrillicLetters; }
+    if (numbers.checked) { base = base + numbersLetters; }
+    if (georgian.checked) { base = base + georgianLetters; }
+    if (ethiopian.checked) { base = base + ethiopianLetters; }
+    if (thaana.checked) { base = base + thaanaLetters; }
+    if (hanzi.checked) { base = base + hanziLetters; }
+    if (numbers.checked) { base = base + numbersLetters; }
+    if (signs.checked) { base = base + signsLetters; }
+    if (numbers.checked) { base = base + numbersLetters; }
+    if (signs.checked) { base = base + signsLetters; }
+    if (numbers.checked) { base = base + numbersLetters; }
     
     
     // fill result
