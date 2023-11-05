@@ -274,5 +274,9 @@ function generatePW() {
     if (result.length != length) { generatePW(); }    
    
     // write to html
-    document.getElementById("productX").innerHTML = result.shuffle(); 
+    document.getElementById("productX").innerHTML = result.shuffle();
+
+    var combinations = Math.pow(base.length, length);
+    
+    document.getElementById("combinations").innerHTML = ( "Possible combinations: " + combinations );
 }
