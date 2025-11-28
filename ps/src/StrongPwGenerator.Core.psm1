@@ -195,7 +195,6 @@ function New-StrongPassword {
             @{ Start = 0x0400; End = 0x04FF }, # Cyrillic
             @{ Start = 0x0500; End = 0x052F }, # Cyrillic Supplement
             @{ Start = 0x0530; End = 0x058F }, # Armenian
-            @{ Start = 0x0590; End = 0x05FF }, # Hebrew
             @{ Start = 0x0600; End = 0x06FF }, # Arabic
             @{ Start = 0x0700; End = 0x074F }, # Syriac
             @{ Start = 0x0750; End = 0x077F }, # Arabic Supplement
