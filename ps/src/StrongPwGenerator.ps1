@@ -3,7 +3,8 @@
 param(
     [System.Collections.IDictionary]$CharacterCheckBoxes,
     [int]$PwLength,
-    [switch]$PlainText
+    [switch]$PlainText,
+    [string]$CustomUnicodeCharacters
 )
 #################################################################
 #                         Configuration                         #
@@ -53,7 +54,14 @@ if ($headlessMode) {
         IncludeEthiopian = $false
         IncludeThaana    = $false
         IncludeHanzi     = $false
+        IncludeCustom    = $false
+        IncludeAllUnicode = $false
+        IncludeEmoji     = $false
+        IncludeSymbols   = $false
+        IncludeDingbats  = $false
     }
+
+    $customCharacters = $null
 
     if ($CharacterCheckBoxes) {
         $normalizationMap = @{
@@ -68,7 +76,6 @@ if ($headlessMode) {
             "signs"           = "IncludeSigns"
             "signscheck"      = "IncludeSigns"
             "includesigns"    = "IncludeSigns"
-            "symbols"         = "IncludeSigns"
             "nordic"          = "IncludeNordic"
             "nordiccheck"     = "IncludeNordic"
             "includenordic"   = "IncludeNordic"
@@ -99,17 +106,70 @@ if ($headlessMode) {
             "hanzi"           = "IncludeHanzi"
             "hanzicheck"      = "IncludeHanzi"
             "includehanzi"    = "IncludeHanzi"
+            "custom"          = "IncludeCustom"
+            "customcheck"     = "IncludeCustom"
+            "includecustom"   = "IncludeCustom"
+            "customunicode"   = "IncludeCustom"
+            "unicode"         = "IncludeCustom"
+            "includeunicode"  = "IncludeCustom"
+            "allunicode"      = "IncludeAllUnicode"
+            "completeunicode" = "IncludeAllUnicode"
+            "unicodeall"      = "IncludeAllUnicode"
+            "emoji"           = "IncludeEmoji"
+            "emojicheck"      = "IncludeEmoji"
+            "includeemoji"    = "IncludeEmoji"
+            "symbols"         = "IncludeSymbols"
+            "symbolcheck"     = "IncludeSymbols"
+            "includesymbols"  = "IncludeSymbols"
+            "dingbats"        = "IncludeDingbats"
+            "dingbatscheck"   = "IncludeDingbats"
+            "includedingbats" = "IncludeDingbats"
         }
 
         foreach ($entry in $CharacterCheckBoxes.GetEnumerator()) {
             if (-not $entry.Key) { continue }
             $normalized = ($entry.Key.ToString().ToLowerInvariant() -replace '[^a-z]', '')
+
+            if ($entry.Value -is [string]) {
+                if ($normalized -in @('customunicodecharacters','customcharacters','unicodecharacters','unicodechars','customchars')) {
+                    if (-not [string]::IsNullOrEmpty($entry.Value)) {
+                        $customCharacters = $entry.Value
+                    }
+                    continue
+                }
+            }
             if (-not $normalized) { continue }
             if ($normalizationMap.ContainsKey($normalized)) {
                 $target = $normalizationMap[$normalized]
                 $defaultFlags[$target] = [bool]$entry.Value
             }
         }
+    }
+
+    if ($PSBoundParameters.ContainsKey('CustomUnicodeCharacters') -and -not [string]::IsNullOrEmpty($CustomUnicodeCharacters)) {
+        $customCharacters = $CustomUnicodeCharacters
+    }
+
+    # Also allow explicit boolean params for unicode ranges
+    if ($PSBoundParameters.ContainsKey('IncludeEmoji') -and $PSBoundParameters['IncludeEmoji']) {
+        $defaultFlags['IncludeEmoji'] = $true
+    }
+    if ($PSBoundParameters.ContainsKey('IncludeSymbols') -and $PSBoundParameters['IncludeSymbols']) {
+        $defaultFlags['IncludeSymbols'] = $true
+    }
+    if ($PSBoundParameters.ContainsKey('IncludeDingbats') -and $PSBoundParameters['IncludeDingbats']) {
+        $defaultFlags['IncludeDingbats'] = $true
+    }
+    if ($PSBoundParameters.ContainsKey('IncludeAllUnicode') -and $PSBoundParameters['IncludeAllUnicode']) {
+        $defaultFlags['IncludeAllUnicode'] = $true
+    }
+
+    if ($customCharacters -and -not $defaultFlags['IncludeCustom']) {
+        $defaultFlags['IncludeCustom'] = $true
+    }
+
+    if ($defaultFlags['IncludeCustom'] -and [string]::IsNullOrWhiteSpace($customCharacters)) {
+        throw "CustomUnicodeCharacters must be provided when IncludeCustom is enabled."
     }
 
     if (-not ($defaultFlags.GetEnumerator() | Where-Object { $_.Value })) {
@@ -121,6 +181,10 @@ if ($headlessMode) {
     }
     foreach ($kvp in $defaultFlags.GetEnumerator()) {
         $generationParams[$kvp.Key] = $kvp.Value
+    }
+
+    if ($defaultFlags['IncludeCustom'] -and $customCharacters) {
+        $generationParams['CustomCharacters'] = $customCharacters
     }
 
     $passwordResult = New-StrongPassword @generationParams
@@ -313,6 +377,11 @@ $georgianCheck = Get-ControlByName -Root $window -Name "GeorgianCheck"
 $ethiopianCheck = Get-ControlByName -Root $window -Name "EthiopianCheck"
 $thaanaCheck = Get-ControlByName -Root $window -Name "ThaanaCheck"
 $hanziCheck = Get-ControlByName -Root $window -Name "HanziCheck"
+$null = $null
+$emojiCheck = Get-ControlByName -Root $window -Name "EmojiCheck"
+$symbolCheck = Get-ControlByName -Root $window -Name "SymbolCheck"
+$dingbatCheck = Get-ControlByName -Root $window -Name "DingbatCheck"
+$allUnicodeCheck = Get-ControlByName -Root $window -Name "AllUnicodeCheck"
 $statusText = Get-ControlByName -Root $window -Name "StatusText"
 
 $uiCharacterCheckBoxes = @(
@@ -328,7 +397,11 @@ $uiCharacterCheckBoxes = @(
     $georgianCheck,
     $ethiopianCheck,
     $thaanaCheck,
-    $hanziCheck
+    $hanziCheck,
+    $emojiCheck,
+    $symbolCheck,
+    $dingbatCheck,
+    $allUnicodeCheck
 ) | Where-Object { $_ }
 
 $evaluateGenerationState = {
@@ -339,6 +412,11 @@ $evaluateGenerationState = {
             break
         }
     }
+
+    # Custom unicode input removed from UI; keep values valid for headless callers
+    $customSelected = $false
+    $customValid = $true
+    $customValue = ''
 
     $lengthValid = $false
     $lengthValue = $null
@@ -351,7 +429,10 @@ $evaluateGenerationState = {
         HasCharSet  = $hasCharSet
         LengthValid = $lengthValid
         LengthValue = $lengthValue
-        CanGenerate = ($hasCharSet -and $lengthValid)
+        CustomValid = $customValid
+        IncludeCustom = $customSelected
+        CustomCharacters = $customValue
+        CanGenerate = ($hasCharSet -and $lengthValid -and $customValid)
     }
 }
 
@@ -363,7 +444,9 @@ $updateGenerateState = {
     if ($generateButton) { $generateButton.IsEnabled = $state.CanGenerate }
 
     if ($statusText) {
-        if (-not $state.HasCharSet) {
+        if (-not $state.CustomValid) {
+            $statusText.Text = "Enter at least one custom character."
+        } elseif (-not $state.HasCharSet) {
             $statusText.Text = "Select at least one character set."
         } elseif (-not $state.LengthValid) {
             $statusText.Text = "Choose a length between 12 and 256 characters."
@@ -388,6 +471,8 @@ foreach ($cb in $uiCharacterCheckBoxes) {
     $cb.Add_Checked($updateGenerateState)
     $cb.Add_Unchecked($updateGenerateState)
 }
+
+# Custom Unicode textbox removed from UI wiring (headless still supported)
 
 & $updateGenerateState $null $null | Out-Null
 
@@ -441,8 +526,36 @@ $generatePassword = {
         $includeEthiopian = [bool]($ethiopianCheck -and $ethiopianCheck.IsChecked)
         $includeThaana = [bool]($thaanaCheck -and $thaanaCheck.IsChecked)
         $includeHanzi = [bool]($hanziCheck -and $hanziCheck.IsChecked)
+        $includeCustom = [bool]$state.IncludeCustom
+        $includeAllUnicode = [bool]($allUnicodeCheck -and $allUnicodeCheck.IsChecked)
 
-        $result = New-StrongPassword -Length $len -IncludeLatin $includeLatin -IncludeNumbers $includeNumbers -IncludeSigns $includeSigns -IncludeNordic $includeNordic -IncludeCyrillic $includeCyrillic -IncludeGreek $includeGreek -IncludeArmenian $includeArmenian -IncludeHangul $includeHangul -IncludeArabic $includeArabic -IncludeGeorgian $includeGeorgian -IncludeEthiopian $includeEthiopian -IncludeThaana $includeThaana -IncludeHanzi $includeHanzi
+        $generatorParams = @{
+            Length           = $len
+            IncludeLatin     = $includeLatin
+            IncludeNumbers   = $includeNumbers
+            IncludeSigns     = $includeSigns
+            IncludeNordic    = $includeNordic
+            IncludeCyrillic  = $includeCyrillic
+            IncludeGreek     = $includeGreek
+            IncludeArmenian  = $includeArmenian
+            IncludeHangul    = $includeHangul
+            IncludeArabic    = $includeArabic
+            IncludeGeorgian  = $includeGeorgian
+            IncludeEthiopian = $includeEthiopian
+            IncludeThaana    = $includeThaana
+            IncludeHanzi     = $includeHanzi
+            IncludeCustom    = $includeCustom
+            IncludeAllUnicode = $includeAllUnicode
+            IncludeEmoji     = [bool]($emojiCheck -and $emojiCheck.IsChecked)
+            IncludeSymbols   = [bool]($symbolCheck -and $symbolCheck.IsChecked)
+            IncludeDingbats  = [bool]($dingbatCheck -and $dingbatCheck.IsChecked)
+        }
+
+        if ($includeCustom) {
+            $generatorParams['CustomCharacters'] = $state.CustomCharacters
+        }
+
+        $result = New-StrongPassword @generatorParams
 
         if ($passwordOutput) { $passwordOutput.Text = $result.Password }
 

@@ -54,6 +54,10 @@ function generatePW() {
     var ethiopian = document.getElementById('ethiopianChecked')
     var thaana = document.getElementById('thaanaChecked')
     var hanzi = document.getElementById('hanziChecked')
+    var allUnicode = document.getElementById('allUnicodeChecked')
+    var emoji = document.getElementById('emojiChecked')
+    var symbols = document.getElementById('symbolChecked')
+    var dingbats = document.getElementById('dingbatChecked')
     
     // build source string
     if (latin.checked) { base = base + latinLetters; }
@@ -69,29 +73,170 @@ function generatePW() {
     if (ethiopian.checked) { base = base + ethiopianLetters; }
     if (thaana.checked) { base = base + thaanaLetters; }
     if (hanzi.checked) { base = base + hanziLetters; }
-      
-    // avoid repeating the last character
-    var last;
+    // Emoji / Symbols / Dingbats ranges (use per-character sampling rather than building a huge base)
+    var isPrintable = function(cp) {
+        if (cp >= 0x0000 && cp <= 0x001F) return false
+        if (cp >= 0x007F && cp <= 0x009F) return false
+        if (cp >= 0xD800 && cp <= 0xDFFF) return false
+        if (cp >= 0xFDD0 && cp <= 0xFDEF) return false
+        if ((cp & 0xFFFF) === 0xFFFE || (cp & 0xFFFF) === 0xFFFF) return false
+        if (cp >= 0xFE00 && cp <= 0xFE0F) return false
+        return true
+    }
 
-    for (let i = 0; i < length; i++) {
-        var rand = Math.floor(Math.random() * base.length);
+    var emojiRanges = [ [0x1F300,0x1F5FF], [0x1F600,0x1F64F], [0x1F900,0x1F9FF] ]
+    var symbolRanges = [ [0x2600,0x26FF] ]
+    var dingbatRanges = [ [0x2700,0x27BF] ]
 
-        if ( last == base.charAt(rand) ) {
-            rand = Math.floor(Math.random() * base.length);
-        }
+    var combinedRanges = []
+    if (emoji && emoji.checked) { combinedRanges = combinedRanges.concat(emojiRanges) }
+    if (symbols && symbols.checked) { combinedRanges = combinedRanges.concat(symbolRanges) }
+    if (dingbats && dingbats.checked) { combinedRanges = combinedRanges.concat(dingbatRanges) }
 
-        if ( last == base.charAt(rand).toLowerCase() ) {
-            rand = Math.floor(Math.random() * base.length);
-        }
-        
-        if ( last == base.charAt(rand).toUpperCase() ) {
-            rand = Math.floor(Math.random() * base.length);
-        }
+    // If we have any combined ranges, we'll sample per-character from them (mixed with base if base exists)
+    var useRangeSampling = (combinedRanges.length > 0)
     
-        last = base.charAt(rand);
-        // can be equal to the last character, but the probability is low
-        result = result + base.charAt(rand);
-    } 
+    // If All Unicode selected, generate by selecting codepoints from ranges (avoid building huge pool)
+    if (allUnicode && allUnicode.checked) {
+        // list of ranges (start, end) - simplified to a representative set per blocks list
+        var ranges = [
+            [0x0020,0x007E],
+            [0x00A0,0x00FF],
+            [0x0100,0x017F],
+            [0x0180,0x024F],
+            [0x0250,0x02AF],
+            [0x02B0,0x02FF],
+            [0x0300,0x036F],
+            [0x0370,0x03FF],
+            [0x0400,0x04FF],
+            [0x0500,0x052F],
+            [0x0530,0x058F],
+            [0x0590,0x05FF],
+            [0x0600,0x06FF],
+            [0x0700,0x074F],
+            [0x0780,0x07BF],
+            [0x0900,0x097F],
+            [0x0980,0x09FF],
+            [0x0A00,0x0A7F],
+            [0x0A80,0x0AFF],
+            [0x0B00,0x0B7F],
+            [0x0B80,0x0BFF],
+            [0x0C00,0x0C7F],
+            [0x0C80,0x0CFF],
+            [0x0D00,0x0D7F],
+            [0x0E00,0x0E7F],
+            [0x0F00,0x0FFF],
+            [0x1000,0x109F],
+            [0x1100,0x11FF],
+            [0x1200,0x137F],
+            [0x13A0,0x13FF],
+            [0x1400,0x167F],
+            [0x1780,0x17FF],
+            [0x1800,0x18AF],
+            [0x1B00,0x1B7F],
+            [0x1C00,0x1C4F],
+            [0x1D00,0x1D7F],
+            [0x1E00,0x1EFF],
+            [0x1F00,0x1FFF],
+            [0x1F600,0x1F64F],
+            [0x2000,0x206F],
+            [0x2100,0x214F],
+            [0x2190,0x21FF],
+            [0x2200,0x22FF],
+            [0x2300,0x23FF],
+            [0x2500,0x257F],
+            [0x25A0,0x25FF],
+            [0x2600,0x26FF],
+            [0x2700,0x27BF],
+            [0x2E80,0x2EFF],
+            [0x3000,0x303F],
+            [0x3040,0x309F],
+            [0x30A0,0x30FF],
+            [0x3130,0x318F],
+            [0x3400,0x4DBF],
+            [0x4E00,0x9FFF]
+        ]
+
+        function isPrintable(cp) {
+            if (cp >= 0x0000 && cp <= 0x001F) return false
+            if (cp >= 0x007F && cp <= 0x009F) return false
+            if (cp >= 0xD800 && cp <= 0xDFFF) return false
+            if (cp >= 0xFDD0 && cp <= 0xFDEF) return false
+            if ((cp & 0xFFFF) === 0xFFFE || (cp & 0xFFFF) === 0xFFFF) return false
+            if (cp >= 0xFE00 && cp <= 0xFE0F) return false
+            return true
+        }
+
+        // pick characters per length (All-Unicode existing path)
+        for (let i = 0; i < length; i++) {
+            let attempts = 0
+            let ch = '?'
+            while (attempts < 50) {
+                let r = ranges[Math.floor(Math.random() * ranges.length)]
+                let cp = Math.floor(Math.random() * (r[1] - r[0] + 1)) + r[0]
+                if (isPrintable(cp)) { ch = String.fromCodePoint(cp); break }
+                attempts++
+            }
+            result += ch
+        }
+
+        // shuffle and write
+        document.getElementById("productX").innerHTML = result.shuffle()
+        document.getElementById("combinations").innerHTML = "Possible combinations: > 1.7976931348623157e+308"
+        return
+    }
+      
+    // If we selected emoji/symbol/dingbats ranges, perform per-character range sampling (mixed with base)
+    if (useRangeSampling) {
+        for (let i = 0; i < length; i++) {
+            // choose between base characters and ranges; if base is empty, always choose ranges
+            let pickFromBase = false
+            if (base.length > 0) {
+                // 50/50 split between base and ranges for mixing
+                pickFromBase = (Math.random() < 0.5)
+            }
+
+            if (pickFromBase) {
+                // select from base string
+                let rand = Math.floor(Math.random() * base.length)
+                result += base.charAt(rand)
+            } else {
+                // sample a codepoint from combinedRanges
+                let ch = '?'
+                let attempts = 0
+                while (attempts < 50) {
+                    let r = combinedRanges[Math.floor(Math.random() * combinedRanges.length)]
+                    let cp = Math.floor(Math.random() * (r[1] - r[0] + 1)) + r[0]
+                    if (isPrintable(cp)) { ch = String.fromCodePoint(cp); break }
+                    attempts++
+                }
+                result += ch
+            }
+        }
+    } else {
+        // avoid repeating the last character when using purely base string
+        var last;
+
+        for (let i = 0; i < length; i++) {
+            var rand = Math.floor(Math.random() * base.length);
+
+            if ( last == base.charAt(rand) ) {
+                rand = Math.floor(Math.random() * base.length);
+            }
+
+            if ( last == base.charAt(rand).toLowerCase() ) {
+                rand = Math.floor(Math.random() * base.length);
+            }
+            
+            if ( last == base.charAt(rand).toUpperCase() ) {
+                rand = Math.floor(Math.random() * base.length);
+            }
+        
+            last = base.charAt(rand);
+            // can be equal to the last character, but the probability is low
+            result = result + base.charAt(rand);
+        }
+    }
     
     // ensure that sequenses are included
     if (cyrillic.checked) { result.replaceAt((Math.random() * result.length), cyrillicLetters.charAt(Math.random() * cyrillicLetters.length)); }

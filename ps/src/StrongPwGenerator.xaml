@@ -295,6 +295,17 @@
                         <CheckBox x:Name="EthiopianCheck" Content="Ethiopian: ሀለሐመሠረሰቀበተኀነአከወዐዘየደገጠጸፀፈጰፐ" Margin="0,3"/>
                         <CheckBox x:Name="ThaanaCheck" Content="Thaana: ހށނރބޅކއވމފދތލގސޑޒޓޔޕޖޗޘޙޚޛޜޝޞޟޠޡޢޣޤޥ       ޱ" Margin="0,3"/>
                         <CheckBox x:Name="HanziCheck" Content="Hanzi: ぁあぃいぅうぇえぉおかがきぎくぐけげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろゎわゐゑをんゔゕゖ  ゝゞゟ" Margin="0,3"/>
+                        <CheckBox x:Name="EmojiCheck" Content="Emoji / Pictographs" Margin="0,3"/>
+                        <CheckBox x:Name="SymbolCheck" Content="Misc Symbols" Margin="0,3"/>
+                        <CheckBox x:Name="DingbatCheck" Content="Dingbats" Margin="0,3"/>
+                        <CheckBox x:Name="AllUnicodeCheck" Content="All Unicode blocks (use complete Unicode range)" Margin="0,6,0,3">
+                            <CheckBox.ToolTip>
+                                <ToolTip>
+                                    <TextBlock TextWrapping="Wrap">Includes emoji and supplementary-plane characters; generated characters may be hard to type or invisible in some fonts.</TextBlock>
+                                </ToolTip>
+                            </CheckBox.ToolTip>
+                        </CheckBox>
+                        <TextBlock Foreground="#FF9CA3A8" FontStyle="Italic" Margin="20,2,0,10" TextWrapping="Wrap">Note: Selecting All Unicode may include emoji and other characters that are not easily typed or displayed.</TextBlock>
 
                         <Separator Margin="0,10,0,10" Background="{StaticResource BorderBrush}" Height="1"/>
 
