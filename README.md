@@ -287,6 +287,7 @@ Notes and guidance
 - The generator always prefers platform CSPRNGs; exclusions only filter which Unicode code points are considered printable for selection.
 - The repository excludes the Buhid block (U+1740..U+175F) by default to avoid glyphs that some fonts or terminals render as confusing characters (e.g., `᝱`). Use `excludeRanges` to add further exclusions.
 - `excludeRanges` works with either arrays in JS (`[ [start,end], ... ]`) or an array of hashtables in PowerShell (`@(@{ Start = n; End = m })`). The CLI flag `--exclude-range` builds the appropriate list for you.
+- `signs` has been updated to avoid characters that can break the use of the password, such as `[`, `/`, `"`, `´`, and other problematic punctuation.
 - Range endpoints are inclusive.
 - When excluding ranges, the generator will retry sampling and, if necessary, substitute safe characters from the selected base pools so the requested password length is preserved.
 
