@@ -187,6 +187,15 @@ if ($headlessMode) {
         $generationParams['CustomCharacters'] = $customCharacters
     }
 
+    # Headless pre-generation warning: if required minimums exceed length, warn and continue best-effort
+    if ($generationParams['IncludeLatin']) { $reqLatin = 4 } else { $reqLatin = 0 }
+    if ($generationParams['IncludeNumbers']) { $reqNums = 3 } else { $reqNums = 0 }
+    if ($generationParams['IncludeSigns']) { $reqSigns = 2 } else { $reqSigns = 0 }
+    $sumReq = $reqLatin + $reqNums + $reqSigns
+    if ($sumReq -gt $generationParams['Length']) {
+        Write-Warning "Requested minimum characters ($sumReq) exceed length $($generationParams['Length']). Generator will perform best-effort placement."
+    }
+
     $passwordResult = New-StrongPassword @generationParams
 
     if (-not $passwordResult -or -not $passwordResult.Password) {
@@ -549,6 +558,24 @@ $generatePassword = {
             IncludeEmoji     = [bool]($emojiCheck -and $emojiCheck.IsChecked)
             IncludeSymbols   = [bool]($symbolCheck -and $symbolCheck.IsChecked)
             IncludeDingbats  = [bool]($dingbatCheck -and $dingbatCheck.IsChecked)
+        }
+
+        # UI-level validation: if minimum required characters exceed selected length, warn and offer choices
+        if ($includeLatin) { $reqLatin = 4 } else { $reqLatin = 0 }
+        if ($includeNumbers) { $reqNums = 3 } else { $reqNums = 0 }
+        if ($includeSigns) { $reqSigns = 2 } else { $reqSigns = 0 }
+        $sumReq = $reqLatin + $reqNums + $reqSigns
+        if ($sumReq -gt $len) {
+            $msg = "The selected length $len may be too small to include the generator's minimum required characters ($sumReq total: 2 uppercase, 2 lowercase, 3 numbers, 2 signs).`n`nChoose 'Yes' to increase length to $sumReq, 'No' to proceed (best-effort), or 'Cancel' to abort."
+            $res = [System.Windows.MessageBox]::Show($msg, "Length Warning", [System.Windows.MessageBoxButton]::YesNoCancel, [System.Windows.MessageBoxImage]::Warning)
+            if ($res -eq [System.Windows.MessageBoxResult]::Yes) {
+                # Increase selector and re-evaluate
+                if ($lengthSelector) { $lengthSelector.SelectedItem = $sumReq }
+                return
+            } elseif ($res -eq [System.Windows.MessageBoxResult]::Cancel) {
+                return
+            }
+            # if No, continue with best-effort
         }
 
         if ($includeCustom) {

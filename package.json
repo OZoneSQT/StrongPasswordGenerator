@@ -1,0 +1,16 @@
+{
+  "name": "strong-password-generator",
+  "version": "1.0.0",
+  "description": "Tests for StrongPasswordGenerator web UI and JS generator",
+  "scripts": {
+    "test": "node ./root/tests/pw.test.js && node ./root/tests/buhid_exclude.test.js && node ./root/tests/cli_smoke_test.js && node ./root/tests/cli_psrun_test.js",
+    "test:js": "node ./root/tests/pw.test.js && node ./root/tests/buhid_exclude.test.js && node ./root/tests/cli_smoke_test.js && node ./root/tests/cli_psrun_test.js",
+    "cli": "node ./bin/strongpw.js"
+  },
+  "bin": {
+    "strongpw": "./bin/strongpw.js"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}

@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Run JS tests and Pester (matrix)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        node-version: ['18.x']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ matrix.node-version }}-
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Run JS tests (node)
+        run: npm test
+
+      - name: Run CLI --ps-run smoke (Windows only)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Write-Host "Running Node CLI --ps-run and validating JSON output"
+          $out = node .\bin\strongpw.js --ps-run --length=16 --include-latin --include-numbers --include-signs | Out-String
+          try {
+              $o = $out | ConvertFrom-Json -ErrorAction Stop
+          } catch {
+              Write-Error "CLI did not return valid JSON: $out"
+              exit 2
+          }
+          if (-not $o.Password) { Write-Error 'JSON missing Password field'; exit 3 }
+          if (-not $o.SecurePassword) { Write-Error 'JSON missing SecurePassword field (PowerShell object metadata)'; exit 4 }
+          Write-Host 'CLI --ps-run smoke OK'
+
+      - name: Run Pester tests (Windows only)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Write-Host "Ensuring Pester module is available and running Pester tests"
+          try {
+            Install-Module -Name Pester -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
+          } catch {
+            Write-Warning "Could not install Pester via PSGallery: $($_.Exception.Message)"
+          }
+          cmd /c .\ps\RunTests.cmd
+          # Also run the explicit ExcludeBuhid Pester test
+          pwsh -NoProfile -Command "Invoke-Pester -Script .\ps\tests\ExcludeBuhid.Tests.ps1 -PassThru"

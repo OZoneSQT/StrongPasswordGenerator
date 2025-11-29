@@ -1,6 +1,12 @@
 
 $script:RandomNumberGenerator = [System.Security.Cryptography.RandomNumberGenerator]::Create()
 
+# Optional entropy accumulator (opt-in).
+$script:EntropyAccumulator = New-Object System.Collections.ArrayList
+$script:EntropyTimer = $null
+$script:EntropyLock = New-Object Object
+$script:UseEntropyAccumulator = $false
+
 $module = $MyInvocation.MyCommand.Module
 if ($module) {
     $module.OnRemove = {
@@ -24,6 +30,19 @@ function Get-CryptoRandomInt {
 
     do {
         $script:RandomNumberGenerator.GetBytes($buffer)
+        # If accumulator is enabled, mix an accumulator chunk into the random bytes (XOR)
+        if ($script:UseEntropyAccumulator -and $script:EntropyAccumulator.Count -gt 0) {
+            $ent = $null
+            [System.Threading.Monitor]::Enter($script:EntropyLock)
+            try {
+                if ($script:EntropyAccumulator.Count -gt 0) { $ent = $script:EntropyAccumulator[0]; $script:EntropyAccumulator.RemoveAt(0) }
+            } finally { [System.Threading.Monitor]::Exit($script:EntropyLock) }
+            if ($ent) {
+                for ($i=0; $i -lt $buffer.Length; $i++) {
+                    $buffer[$i] = $buffer[$i] -bxor $ent[$i % $ent.Length]
+                }
+            }
+        }
         $value = [System.BitConverter]::ToUInt32($buffer, 0)
     } while ($value -ge $upperBound)
 
@@ -41,6 +60,107 @@ function Get-CryptoRandomInRange {
     }
 
     return $MinInclusive + (Get-CryptoRandomInt -MaxExclusive ($MaxExclusive - $MinInclusive))
+}
+
+# Start the optional entropy accumulator. Collects lightweight system metrics periodically and
+# hashes them into 32-byte chunks stored in an internal accumulator. This is opt-in and does not
+# replace the OS CSPRNG; when enabled the accumulator bytes are XOR-mixed into RNG output.
+function Start-EntropyAccumulator {
+    param(
+        [int]$IntervalSeconds = 60,
+        [int]$MaxChunks = 16
+    )
+
+    if ($script:EntropyTimer) { Stop-EntropyAccumulator }
+
+    $script:UseEntropyAccumulator = $true
+
+    $collect = {
+        try {
+            $ts = [DateTime]::UtcNow.Ticks
+            $tick = [Environment]::TickCount
+            $mem = (Get-Process | Measure-Object -Property WorkingSet -Sum).Sum
+            $cpu = 0
+            try { $cpu = (Get-Counter '\Processor(_Total)\% Processor Time' -ErrorAction SilentlyContinue).CounterSamples.CookedValue } catch { }
+
+            $b = New-Object System.IO.MemoryStream
+            $bw = New-Object System.IO.BinaryWriter($b)
+            $bw.Write([int64]$ts)
+            $bw.Write([int32]$tick)
+            $bw.Write([int64]$mem)
+            $bw.Write([double]$cpu)
+            $bw.Flush()
+
+            $sha = [System.Security.Cryptography.SHA256]::Create()
+            $hash = $sha.ComputeHash($b.ToArray())
+            $sha.Dispose()
+
+            [System.Threading.Monitor]::Enter($script:EntropyLock)
+            try {
+                while ($script:EntropyAccumulator.Count -ge $MaxChunks) { $script:EntropyAccumulator.RemoveAt(0) }
+                [void]$script:EntropyAccumulator.Add($hash)
+            } finally { [System.Threading.Monitor]::Exit($script:EntropyLock) }
+        } catch { }
+    }
+
+    $timer = New-Object System.Timers.Timer($IntervalSeconds * 1000)
+    $timer.AutoReset = $true
+    $subscription = Register-ObjectEvent -InputObject $timer -EventName Elapsed -Action { & $collect } -SupportEvent
+    $timer.Start()
+    $script:EntropyTimer = @{ Timer = $timer; Event = $subscription; Interval = $IntervalSeconds }
+}
+
+function Stop-EntropyAccumulator {
+    if ($script:EntropyTimer) {
+        try {
+            $script:EntropyTimer.Timer.Stop()
+            try { Unregister-Event -SubscriptionId $script:EntropyTimer.Event.Id -ErrorAction SilentlyContinue } catch { }
+            try { Unregister-Event -SubscriptionId $script:EntropyTimer.Event.SubscriptionId -ErrorAction SilentlyContinue } catch { }
+            try { Unregister-Event -SourceIdentifier $script:EntropyTimer.Event.SourceIdentifier -ErrorAction SilentlyContinue } catch { }
+            $script:EntropyTimer.Timer.Dispose()
+        } catch { }
+        $script:EntropyTimer = $null
+    }
+    $script:UseEntropyAccumulator = $false
+    [System.Threading.Monitor]::Enter($script:EntropyLock)
+    try { $script:EntropyAccumulator.Clear() } finally { [System.Threading.Monitor]::Exit($script:EntropyLock) }
+}
+
+function Get-EntropyAccumulatorStatus {
+    return [pscustomobject]@{
+        Enabled = [bool]$script:UseEntropyAccumulator
+        Chunks = $script:EntropyAccumulator.Count
+        IntervalSeconds = if ($script:EntropyTimer) { $script:EntropyTimer.Interval } else { $null }
+    }
+}
+
+# Helper: produce both plaintext and SecureString from New-StrongPassword
+function New-StrongPasswordObject {
+    param(
+        [int]$Length = 32,
+        [bool]$IncludeLatin = $true,
+        [bool]$IncludeNumbers = $true,
+        [bool]$IncludeSigns = $true,
+        [bool]$IncludeAllUnicode = $false,
+        [bool]$IncludeEmoji = $false,
+        [bool]$IncludeSymbols = $false,
+        [bool]$IncludeDingbats = $false,
+        [switch]$UseEntropy,
+        [array]$ExcludeRanges
+    )
+
+    $prev = $script:UseEntropyAccumulator
+    if ($UseEntropy) { $script:UseEntropyAccumulator = $true }
+    try {
+        $params = @{ Length = $Length; IncludeLatin = $IncludeLatin; IncludeNumbers = $IncludeNumbers; IncludeSigns = $IncludeSigns; IncludeAllUnicode = $IncludeAllUnicode; IncludeEmoji = $IncludeEmoji; IncludeSymbols = $IncludeSymbols; IncludeDingbats = $IncludeDingbats }
+        if ($ExcludeRanges) { $params['ExcludeRanges'] = $ExcludeRanges }
+        $res = New-StrongPassword @params
+        if (-not $res -or -not $res.Password) { throw 'Password generation failed' }
+        $secure = ConvertTo-SecureString -String $res.Password -AsPlainText -Force
+        return [pscustomobject]@{ Password = $res.Password; SecurePassword = $secure; Combinations = $res.Combinations }
+    } finally {
+        $script:UseEntropyAccumulator = $prev
+    }
 }
 
 function Get-CryptoRandomChar {
@@ -106,6 +226,7 @@ function New-StrongPassword {
             [bool]$IncludeEmoji = $false,
             [bool]$IncludeSymbols = $false,
             [bool]$IncludeDingbats = $false
+                , [array]$ExcludeRanges
     )
 
     # Character sets
@@ -156,6 +277,14 @@ function New-StrongPassword {
     if ($Length -lt 1) {
         throw "Length must be greater than 0."
     }
+
+    # Pre-check: determine required minimum characters and fail fast if impossible
+    if ($IncludeLatin) { $requiredLatin = 4 } else { $requiredLatin = 0 }
+    if ($IncludeNumbers) { $requiredNumbers = 3 } else { $requiredNumbers = 0 }
+    if ($IncludeSigns) { $requiredSigns = 2 } else { $requiredSigns = 0 }
+    $sumRequired = $requiredLatin + $requiredNumbers + $requiredSigns
+        # Previous behavior: best-effort placement when requested minimums exceed length.
+        # Do not fail here; enforcement will replace characters where possible later.
 
     # Build base string (unless we're using range generation for full Unicode)
     $base = ""
@@ -380,6 +509,23 @@ function New-StrongPassword {
         if ($cp -ge 0xFE00 -and $cp -le 0xFE0F) { return $false }
         # Exclude characters where low 16 bits are 0xFFFE/0xFFFF (non-characters at end of plane)
         if (($cp -band 0xFFFF) -eq 0xFFFE -or ($cp -band 0xFFFF) -eq 0xFFFF) { return $false }
+
+        # Exclude Buhid block (U+1740..U+175F) which can produce glyphs like '᝱' in some fonts/terminals
+        if ($cp -ge 0x1740 -and $cp -le 0x175F) { return $false }
+        # Honor user-provided exclusion ranges (array of hashtables @{Start=int; End=int} or arrays)
+        if ($ExcludeRanges) {
+            foreach ($ex in $ExcludeRanges) {
+                try {
+                    if ($ex -is [hashtable] -or $ex -is [pscustomobject]) {
+                        $s = [int]$ex.Start; $e = [int]$ex.End
+                    } else {
+                        # assume array-like
+                        $s = [int]$ex[0]; $e = [int]$ex[1]
+                    }
+                    if ($cp -ge $s -and $cp -le $e) { return $false }
+                } catch { }
+            }
+        }
         return $true
     }
 
@@ -488,25 +634,39 @@ function New-StrongPassword {
         $pos = Get-CryptoRandomInt -MaxExclusive $result.Length
         $resultChars[$pos] = Get-CryptoRandomChar -CharSet $CustomCharacters
     }
+    # Ensure minimum counts for selected sets: 2 uppercase, 2 lowercase, 3 numbers, 2 signs
     if ($IncludeLatin) {
-        if (-not ($result -cmatch '[a-z]')) {
-            $pos = Get-CryptoRandomInt -MaxExclusive $result.Length
-            $resultChars[$pos] = [char](Get-CryptoRandomInRange -MinInclusive 97 -MaxExclusive 123)
-        }
-        if (-not ($result -cmatch '[A-Z]')) {
-            $pos = Get-CryptoRandomInt -MaxExclusive $result.Length
+        $upperCount = ([regex]::Matches($result, '[A-Z]')).Count
+        $lowerCount = ([regex]::Matches($result, '[a-z]')).Count
+        $needUpper = [Math]::Max(0, 2 - $upperCount)
+        $needLower = [Math]::Max(0, 2 - $lowerCount)
+
+        for ($i = 0; $i -lt $needUpper; $i++) {
+            $pos = Get-CryptoRandomInt -MaxExclusive $resultChars.Length
             $resultChars[$pos] = [char](Get-CryptoRandomInRange -MinInclusive 65 -MaxExclusive 91)
         }
+        for ($i = 0; $i -lt $needLower; $i++) {
+            $pos = Get-CryptoRandomInt -MaxExclusive $resultChars.Length
+            $resultChars[$pos] = [char](Get-CryptoRandomInRange -MinInclusive 97 -MaxExclusive 123)
+        }
     }
-    if ($IncludeNumbers -and -not (Test-CharInString -TestString $result -CharSet $numbersLetters)) {
-        for ($i = 0; $i -lt 3; $i++) {
-            $pos = Get-CryptoRandomInt -MaxExclusive $result.Length
+
+    if ($IncludeNumbers) {
+        $numCount = 0
+        foreach ($c in $resultChars) { if ($numbersLetters.Contains($c)) { $numCount++ } }
+        $needNums = [Math]::Max(0, 3 - $numCount)
+        for ($i = 0; $i -lt $needNums; $i++) {
+            $pos = Get-CryptoRandomInt -MaxExclusive $resultChars.Length
             $resultChars[$pos] = Get-CryptoRandomChar -CharSet $numbersLetters
         }
     }
-    if ($IncludeSigns -and -not (Test-CharInString -TestString $result -CharSet $signsLetters)) {
-        for ($i = 0; $i -lt 2; $i++) {
-            $pos = Get-CryptoRandomInt -MaxExclusive $result.Length
+
+    if ($IncludeSigns) {
+        $signCount = 0
+        foreach ($c in $resultChars) { if ($signsLetters.Contains($c)) { $signCount++ } }
+        $needSigns = [Math]::Max(0, 2 - $signCount)
+        for ($i = 0; $i -lt $needSigns; $i++) {
+            $pos = Get-CryptoRandomInt -MaxExclusive $resultChars.Length
             $resultChars[$pos] = Get-CryptoRandomChar -CharSet $signsLetters
         }
     }
@@ -579,4 +739,4 @@ function New-StrongPassword {
     }
 }
 
-Export-ModuleMember -Function Get-ShuffledString, Test-CharInString, New-StrongPassword
+Export-ModuleMember -Function Get-ShuffledString, Test-CharInString, New-StrongPassword, New-StrongPasswordObject, Start-EntropyAccumulator, Stop-EntropyAccumulator, Get-EntropyAccumulatorStatus
