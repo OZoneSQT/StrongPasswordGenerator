@@ -163,10 +163,13 @@ function buildPassword(opts) {
 	}
 
 	// Enforce minimum class counts (if included)
-	const reqUpper = include.latin ? 2 : 0;
-	const reqLower = include.latin ? 2 : 0;
+	// Requirement: if Latin selected -> at least 3 lowercase and 3 uppercase
+	//              if Numbers selected -> at least 3 digits
+	//              if Signs selected -> at least 3 special characters
+	const reqUpper = include.latin ? 3 : 0;
+	const reqLower = include.latin ? 3 : 0;
 	const reqNumbers = include.numbers ? 3 : 0;
-	const reqSigns = include.signs ? 2 : 0;
+	const reqSigns = include.signs ? 3 : 0;
 
 	function randIndex(len) { return (len && len > 0) ? secureRandomInt(len) : 0; }
 	function setAtIndices(s, indices, chars) {
