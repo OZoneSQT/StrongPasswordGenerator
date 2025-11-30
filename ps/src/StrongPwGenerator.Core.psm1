@@ -156,7 +156,19 @@ function New-StrongPasswordObject {
         if ($ExcludeRanges) { $params['ExcludeRanges'] = $ExcludeRanges }
         $res = New-StrongPassword @params
         if (-not $res -or -not $res.Password) { throw 'Password generation failed' }
-        $secure = ConvertTo-SecureString -String $res.Password -AsPlainText -Force
+        try {
+            $secure = ConvertTo-SecureString -String $res.Password -AsPlainText -Force
+        } catch {
+            # Fallback: construct a SecureString via .NET if ConvertTo-SecureString is unavailable
+            try {
+                $secure = New-Object System.Security.SecureString
+                foreach ($ch in $res.Password.ToCharArray()) { $secure.AppendChar([char]$ch) }
+                $secure.MakeReadOnly()
+            } catch {
+                # As a last resort, return $null for SecurePassword but keep plaintext available
+                $secure = $null
+            }
+        }
         return [pscustomobject]@{ Password = $res.Password; SecurePassword = $secure; Combinations = $res.Combinations }
     } finally {
         $script:UseEntropyAccumulator = $prev
