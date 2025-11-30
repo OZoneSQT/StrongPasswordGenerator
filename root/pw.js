@@ -54,6 +54,7 @@ function buildPassword(opts) {
 	const emoji = !!opts.includeEmoji;
 	const symbols = !!opts.includeSymbols;
 	const dingbats = !!opts.includeDingbats;
+	const extraChars = opts.extraChars || "";
 
 	const latinLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 	const numbers = "0123456789";
@@ -65,6 +66,7 @@ function buildPassword(opts) {
 	if (include.numbers) base += numbers + numbers + numbers; // bias numbers
 	if (include.signs) base += signs + signs;
 	if (!base) base = latinLetters + numbers + signs;
+	if (extraChars) base += extraChars;
 
 	// Printable check for Unicode sampling
 	function isPrintable(cp) {
@@ -208,4 +210,62 @@ function buildPassword(opts) {
 	return { Password: result, Combinations: Math.pow((base.length || 1), length) };
 }
 
-if (typeof module !== 'undefined' && module.exports) module.exports = { buildPassword };
+function generatePW() {
+	// If no DOM available (Node), just return a password object
+	if (typeof document === 'undefined') {
+		return buildPassword();
+	}
+
+	const get = id => document.getElementById(id);
+	const opts = {};
+	opts.length = parseInt(get('lengthChecked') ? get('lengthChecked').value : 32, 10) || 32;
+	opts.include = {
+		latin: !!(get('latinChecked') && get('latinChecked').checked),
+		numbers: !!(get('numbersChecked') && get('numbersChecked').checked),
+		signs: !!(get('signsChecked') && get('signsChecked').checked)
+	};
+	opts.includeAllUnicode = !!(get('allUnicodeChecked') && get('allUnicodeChecked').checked);
+	opts.includeEmoji = !!(get('emojiChecked') && get('emojiChecked').checked);
+	opts.includeSymbols = !!(get('symbolChecked') && get('symbolChecked').checked);
+	opts.includeDingbats = !!(get('dingbatChecked') && get('dingbatChecked').checked);
+
+	// Additional script-specific pools from checkboxes
+	var extra = "";
+	var nordic = "ÁáÐðÉéÍíÓóÚúÝýÞþÆæÖöZzÄäØøÅå";
+	var greek = "ΑαΒβΓγΔδΕεΖζΗηΘθΙιΚκΛλΜμΝνΞξΟοΠπΡρΣσςΤτΥυΦφΧχΨψΩω";
+	var cyrillic = "БбВвГгДдЕеЖжЗзИиЙйКкЛлМмНнОоПпРрСсТтУуФфХхЦцЧчШшЩщЬьЮюЯя";
+	var armenian = "աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆուև";
+	var hangul = "ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎㅏㅑㅓㅕㅗㅛㅜㅠㅡㅣ";
+	var arabic = "ءي و ه ن م لك ق ف غ ع ظ ط ض ص ش س ز ر ذ د خ ح ج ث ت ب ا";
+	var georgian = "აბგდევზთიკლმნოპჟრსტუფქღყშჩცძწჭხჯჰ";
+	var ethiopian = "ሀለሐመሠረሰቀበተኀነአከወዐዘየደገጠጸፀፈጰፐ";
+	var thaana = "ހށނރބޅކއވމފދތލގސޑޒޓޔޕޖޗޘޙޚޛޜޝޞޟޠޡޢޣޤޥަ ީ ު ޫ ެ ޭ ޮ ޯޱ";
+	var hanzi = "ぁあぃいぅうぇえぉおかがきぎくぐけげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろゎわゐゑをんゔゕゖ ゙ ゛゜ゝゞゟ";
+
+	if (get('nordicChecked') && get('nordicChecked').checked) extra += nordic;
+	if (get('greekChecked') && get('greekChecked').checked) extra += greek;
+	if (get('cyrillicChecked') && get('cyrillicChecked').checked) extra += cyrillic;
+	if (get('armenianChecked') && get('armenianChecked').checked) extra += armenian;
+	if (get('hangulChecked') && get('hangulChecked').checked) extra += hangul;
+	if (get('arabicChecked') && get('arabicChecked').checked) extra += arabic;
+	if (get('georgianChecked') && get('georgianChecked').checked) extra += georgian;
+	if (get('ethiopianChecked') && get('ethiopianChecked').checked) extra += ethiopian;
+	if (get('thaanaChecked') && get('thaanaChecked').checked) extra += thaana;
+	if (get('hanziChecked') && get('hanziChecked').checked) extra += hanzi;
+
+	opts.extraChars = extra;
+
+	const out = buildPassword(opts);
+	const pEl = get('productX');
+	const cEl = get('combinations');
+	if (pEl) pEl.textContent = out.Password;
+	if (cEl) {
+		if (Number.isFinite(out.Combinations)) cEl.textContent = out.Combinations.toLocaleString();
+		else cEl.textContent = '>1.7976931348623157e+308 combinations';
+	}
+	return out;
+}
+
+if (typeof window !== 'undefined') window.generatePW = generatePW;
+
+if (typeof module !== 'undefined' && module.exports) module.exports = { buildPassword, generatePW };
